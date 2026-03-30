@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { mockWords } from '../data/mockData';
 import { Question, Word } from '../types';
+import { api } from '../api/client';
 
 // Simple sound generator using Web Audio API
 const playDrumBeat = (volume: number, isError: boolean = false) => {
@@ -63,63 +63,45 @@ export const Game: React.FC = () => {
   const { currentRound, currentQuestionIndex, score, combo, volume, selectedLevel, submitAnswer, resetGame } = useGameStore();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [selectedMultiple, setSelectedMultiple] = useState<string[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Generate mock questions on mount or round change
   useEffect(() => {
-    const levelWords = mockWords.filter(w => w.level === selectedLevel);
-    // Fallback to all mockWords if the specific level has too few mock words
-    const wordPool = levelWords.length >= 4 ? levelWords : mockWords;
-
-    const generated: Question[] = [];
-    for (let i = 0; i < 10; i++) {
-      const isMultiple = i >= 8;
-      
-      if (!isMultiple) {
-        // Single choice: pick 1 correct, 3 wrong
-        const correct = wordPool[Math.floor(Math.random() * wordPool.length)];
-        const options = [correct];
-        while(options.length < 4 && options.length < wordPool.length) {
-          const wrong = wordPool[Math.floor(Math.random() * wordPool.length)];
-          if (!options.find(o => o.id === wrong.id)) options.push(wrong);
+    let active = true;
+    const loadQuestions = async () => {
+      try {
+        setLoading(true);
+        const res = await api.getQuestions({ level: selectedLevel, round: currentRound });
+        if (active) {
+          setQuestions(res.questions as Question[]);
+          setSelectedMultiple([]);
+          setError(null);
         }
-        // Shuffle
-        options.sort(() => Math.random() - 0.5);
-
-        generated.push({
-          id: `q-${currentRound}-${i}`,
-          type: 'single',
-          word: correct,
-          options,
-          correctAnswer: correct.id,
-          categoryContext: 'Choose the correct translation'
-        });
-      } else {
-        // Multiple choice: find words with positive/neutral sentiment
-        const options = [...wordPool].sort(() => Math.random() - 0.5).slice(0, 4);
-        const correctIds = options.filter(o => o.sentiment === 'positive' || o.sentiment === 'neutral').map(o => o.id);
-        
-        generated.push({
-          id: `q-${currentRound}-${i}`,
-          type: 'multiple',
-          options,
-          correctAnswer: correctIds,
-          categoryContext: 'Select all POSITIVE/NEUTRAL words'
-        });
+      } catch (err) {
+        if (active) {
+          setError((err as Error).message || 'Failed to load questions');
+        }
+      } finally {
+        if (active) setLoading(false);
       }
-    }
-    setQuestions(generated);
-    setSelectedMultiple([]);
+    };
+    loadQuestions();
+    return () => {
+      active = false;
+    };
   }, [currentRound, selectedLevel]);
 
-  if (questions.length === 0) return <div className="text-center p-10">Loading...</div>;
+  if (loading) return <div className="text-center p-10">Loading...</div>;
+  if (error) return <div className="text-center p-10 text-red-500">{error}</div>;
+  if (questions.length === 0) return <div className="text-center p-10">No questions found.</div>;
 
   const currentQ = questions[currentQuestionIndex];
   const isMultiple = currentQ.type === 'multiple';
 
   const handleSingleClick = (optionId: string) => {
-    const isCorrect = optionId === currentQ.correctAnswer;
+    const isCorrect = currentQ.correctAnswerIds.includes(optionId);
     playDrumBeat(volume, !isCorrect);
-    submitAnswer(isCorrect, currentQ.word);
+    submitAnswer(isCorrect, currentQ.word as Word);
   };
 
   const toggleMultiple = (optionId: string) => {
@@ -129,7 +111,7 @@ export const Game: React.FC = () => {
   };
 
   const submitMultiple = () => {
-    const correctAnswers = currentQ.correctAnswer as string[];
+    const correctAnswers = currentQ.correctAnswerIds;
     const isCorrect = 
       selectedMultiple.length === correctAnswers.length &&
       selectedMultiple.every(id => correctAnswers.includes(id));
@@ -175,7 +157,7 @@ export const Game: React.FC = () => {
             </span>
 
             <h2 className="text-lg md:text-2xl font-bold text-slate-800 mb-2 text-center">
-              {currentQ.categoryContext}
+              {currentQ.prompt}
             </h2>
 
             {currentQ.word && (
@@ -201,7 +183,9 @@ export const Game: React.FC = () => {
                     `}
                   >
                     {!isMultiple ? (
-                      <span className="text-sm md:text-base font-medium text-slate-700">{opt.pos} {opt.translation}</span>
+                      <span className="text-sm md:text-base font-medium text-slate-700">
+                        {opt.translation}
+                      </span>
                     ) : (
                       <div className="flex flex-col">
                         <span className="font-bold text-base md:text-lg">{opt.word}</span>

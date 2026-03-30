@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from 'fs';
 import path from 'path';
 
-const sourcePath = path.join(__dirname, '..', '..', '综合英语词汇学习手册-20a7916a3f.md');
+const sourcePath = path.join(__dirname, '..', '..', '..', '综合英语词汇学习手册-20a7916a3f.md');
 const outputPath = path.join(__dirname, '..', 'data', 'words.json');
 
 const levelMap: Record<string, string> = {

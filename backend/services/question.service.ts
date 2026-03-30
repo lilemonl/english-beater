@@ -5,6 +5,7 @@ export interface QuestionOption {
   id: string;
   word: string;
   translation: string;
+  pos?: string;
 }
 
 export interface Question {
@@ -54,7 +55,9 @@ const buildSingleQuestion = (pool: Word[], index: number): Question => {
     word: {
       id: correct.id,
       word: correct.word,
-      phonetic: correct.phonetic
+      phonetic: correct.phonetic,
+      translation: correct.translation,
+      pos: correct.pos
     },
     options: allOptions,
     correctAnswerIds: [correct.id]
@@ -76,7 +79,8 @@ const buildMultipleQuestion = (pool: Word[], index: number): Question => {
     options: options.map((w) => ({
       id: w.id,
       word: w.word,
-      translation: w.translation
+      translation: w.translation,
+      pos: w.pos
     })),
     correctAnswerIds: correct.map((w) => w.id)
   };

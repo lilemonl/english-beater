@@ -1,9 +1,13 @@
 import { create } from 'zustand';
-import { GameState, GameResultData, Word } from '../types';
+import { GameState, Word } from '../types';
+import { api } from '../api/client';
 
 interface StoreState {
   gameState: GameState;
   setGameState: (state: GameState) => void;
+  authReady: boolean;
+  token: string | null;
+  openid: string | null;
   
   // Game session states
   currentRound: number;
@@ -22,6 +26,14 @@ interface StoreState {
     notes: Record<string, string>;
   };
 
+  initAuth: () => Promise<void>;
+  loadProgress: () => Promise<void>;
+  saveProgress: (payload?: {
+    starred?: string[];
+    favourites?: string[];
+    notes?: Record<string, string>;
+  }) => Promise<void>;
+
   startGame: (level: string) => void;
   submitAnswer: (isCorrect: boolean, word?: Word) => void;
   endGame: () => void;
@@ -37,9 +49,12 @@ const BASE_VOLUME = 0.4;
 const MAX_VOLUME = 1.0;
 const VOLUME_STEP = 0.1;
 
-export const useGameStore = create<StoreState>((set) => ({
-  gameState: 'menu',
+export const useGameStore = create<StoreState>((set, get) => ({
+  gameState: 'login',
   setGameState: (state) => set({ gameState: state }),
+  authReady: false,
+  token: null,
+  openid: null,
 
   currentRound: 1,
   currentQuestionIndex: 0,
@@ -55,33 +70,95 @@ export const useGameStore = create<StoreState>((set) => ({
     notes: {}
   },
 
-  toggleStar: (id) => set((state) => ({
-    userData: {
-      ...state.userData,
-      starred: state.userData.starred.includes(id) 
-        ? state.userData.starred.filter(x => x !== id)
-        : [...state.userData.starred, id]
+  initAuth: async () => {
+    try {
+      const { openid, token } = await api.login('mock');
+      set({ openid, token, authReady: true });
+      await get().loadProgress();
+    } catch (err) {
+      console.error('[auth] init failed', err);
+      set({ authReady: true });
     }
-  })),
+  },
 
-  toggleFavourite: (id) => set((state) => ({
-    userData: {
-      ...state.userData,
-      favourites: state.userData.favourites.includes(id) 
-        ? state.userData.favourites.filter(x => x !== id)
-        : [...state.userData.favourites, id]
+  loadProgress: async () => {
+    const token = get().token;
+    if (!token) return;
+    try {
+      const progress = await api.getProgress(token);
+      set({
+        userData: {
+          starred: progress.starred || [],
+          favourites: progress.favourites || [],
+          notes: progress.notes || {}
+        }
+      });
+    } catch (err) {
+      console.error('[progress] load failed', err);
     }
-  })),
+  },
 
-  setNote: (id, text) => set((state) => ({
-    userData: {
-      ...state.userData,
-      notes: {
-        ...state.userData.notes,
-        [id]: text
+  saveProgress: async (payload) => {
+    const token = get().token;
+    if (!token) return;
+    const current = get().userData;
+    const data = {
+      starred: payload?.starred ?? current.starred,
+      favourites: payload?.favourites ?? current.favourites,
+      notes: payload?.notes ?? current.notes
+    };
+    try {
+      const saved = await api.saveProgress(token, data);
+      set({
+        userData: {
+          starred: saved.starred || [],
+          favourites: saved.favourites || [],
+          notes: saved.notes || {}
+        }
+      });
+    } catch (err) {
+      console.error('[progress] save failed', err);
+    }
+  },
+
+  toggleStar: (id) => {
+    const current = get().userData;
+    const next = current.starred.includes(id)
+      ? current.starred.filter(x => x !== id)
+      : [...current.starred, id];
+    set({
+      userData: {
+        ...current,
+        starred: next
       }
-    }
-  })),
+    });
+  },
+
+  toggleFavourite: (id) => {
+    const current = get().userData;
+    const next = current.favourites.includes(id)
+      ? current.favourites.filter(x => x !== id)
+      : [...current.favourites, id];
+    set({
+      userData: {
+        ...current,
+        favourites: next
+      }
+    });
+  },
+
+  setNote: (id, text) => {
+    const current = get().userData;
+    set({
+      userData: {
+        ...current,
+        notes: {
+          ...current.notes,
+          [id]: text
+        }
+      }
+    });
+  },
 
   startGame: (level) => set({
     gameState: 'playing',

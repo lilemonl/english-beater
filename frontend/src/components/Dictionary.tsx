@@ -1,27 +1,55 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card, Tag, Button, Input, Progress, Space, Segmented, Typography, Tooltip } from 'antd';
 import { StarOutlined, StarFilled, HeartOutlined, HeartFilled, EditOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useGameStore } from '../store/gameStore';
-import { mockWords } from '../data/mockData';
+import { api } from '../api/client';
+import { Word } from '../types';
 
 const { Text } = Typography;
 const { TextArea } = Input;
 
 export const Dictionary: React.FC = () => {
-  const { setGameState, userData, toggleStar, toggleFavourite, setNote } = useGameStore();
+  const { setGameState, userData, toggleStar, toggleFavourite, setNote, saveProgress } = useGameStore();
   const [filter, setFilter] = useState<string>('All');
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
+  const [words, setWords] = useState<Word[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        setLoading(true);
+        const res = await api.getDictionary({ page: 1, pageSize: 2000 });
+        if (active) {
+          setWords(res.list as Word[]);
+          setError(null);
+        }
+      } catch (err) {
+        if (active) {
+          setError((err as Error).message || 'Failed to load dictionary');
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filteredWords = useMemo(() => {
-    if (filter === 'Starred ⭐') return mockWords.filter(w => userData.starred.includes(w.id));
-    if (filter === 'Favourited ❤️') return mockWords.filter(w => userData.favourites.includes(w.id));
-    if (filter === 'All') return mockWords;
-    return mockWords.filter(w => w.level === filter);
-  }, [filter, userData]);
+    if (filter === 'Starred ⭐') return words.filter(w => userData.starred.includes(w.id));
+    if (filter === 'Favourited ❤️') return words.filter(w => userData.favourites.includes(w.id));
+    if (filter === 'All') return words;
+    return words.filter(w => w.level === filter);
+  }, [filter, userData, words]);
 
   // Calculate unique learned words (starred or favourited)
   const learnedCount = new Set([...userData.starred, ...userData.favourites]).size;
-  const progressPercent = Math.round((learnedCount / mockWords.length) * 100);
+  const progressPercent = words.length === 0 ? 0 : Math.round((learnedCount / words.length) * 100);
 
   return (
     <div className="min-h-screen bg-slate-100 p-4 md:p-8">
@@ -58,6 +86,16 @@ export const Dictionary: React.FC = () => {
 
         {/* Words Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {loading && (
+            <div className="col-span-1 md:col-span-2 text-center py-12 text-slate-400">
+              Loading dictionary...
+            </div>
+          )}
+          {error && (
+            <div className="col-span-1 md:col-span-2 text-center py-12 text-red-500">
+              {error}
+            </div>
+          )}
           {filteredWords.map(w => {
             const isStarred = userData.starred.includes(w.id);
             const isFav = userData.favourites.includes(w.id);
@@ -75,13 +113,25 @@ export const Dictionary: React.FC = () => {
                     <Tooltip title="Star this word">
                       <Button type="text" shape="circle" 
                         icon={isStarred ? <StarFilled style={{color: '#faad14', fontSize: '18px'}}/> : <StarOutlined style={{fontSize: '18px'}}/>} 
-                        onClick={() => toggleStar(w.id)} 
+                        onClick={() => {
+                          const next = isStarred
+                            ? userData.starred.filter(x => x !== w.id)
+                            : [...userData.starred, w.id];
+                          toggleStar(w.id);
+                          saveProgress({ starred: next, favourites: userData.favourites, notes: userData.notes });
+                        }} 
                       />
                     </Tooltip>
                     <Tooltip title="Favourite this word">
                       <Button type="text" shape="circle" 
                         icon={isFav ? <HeartFilled style={{color: '#ff4d4f', fontSize: '18px'}}/> : <HeartOutlined style={{fontSize: '18px'}}/>} 
-                        onClick={() => toggleFavourite(w.id)} 
+                        onClick={() => {
+                          const next = isFav
+                            ? userData.favourites.filter(x => x !== w.id)
+                            : [...userData.favourites, w.id];
+                          toggleFavourite(w.id);
+                          saveProgress({ starred: userData.starred, favourites: next, notes: userData.notes });
+                        }} 
                       />
                     </Tooltip>
                   </Space>
@@ -111,6 +161,7 @@ export const Dictionary: React.FC = () => {
                           rows={2} 
                           value={note} 
                           onChange={(e) => setNote(w.id, e.target.value)} 
+                          onBlur={(e) => saveProgress({ notes: { ...userData.notes, [w.id]: e.target.value } })}
                           placeholder="Write your personal learning notes here..."
                           className="text-sm"
                         />
