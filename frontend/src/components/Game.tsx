@@ -140,63 +140,52 @@ export const Game: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-100">
-      {/* Header */}
-      <header className="bg-slate-800 text-white p-4 shadow-md relative sticky top-0">
+    <div className="flex flex-col min-h-screen bg-slate-100 fade-in">
+      <header className="bg-slate-800 text-white p-3 md:p-4 shadow-md relative sticky top-0">
         <div className="flex justify-between items-center pb-1">
-          <div className="flex items-center gap-4">
-            <button onClick={() => { if(window.confirm('Are you sure you want to quit? Your current game progress will be lost.')) resetGame(); }} className="text-slate-400 hover:text-white transition-colors flex items-center justify-center bg-slate-700 p-2 rounded-lg" title="Quit Game">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          <div className="flex items-center gap-2 md:gap-4">
+            <button onClick={() => { if(window.confirm('Are you sure you want to quit? Your current game progress will be lost.')) resetGame(); }} className="text-slate-400 hover:text-white transition-colors flex items-center justify-center bg-slate-700 p-1.5 md:p-2 rounded-lg" title="Quit Game">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
             </button>
             <div>
-              <h1 className="font-bold text-xl text-blue-400 leading-none">English Beater 🥁</h1>
-              <p className="text-xs text-slate-400 mt-1">Level: <span className="font-bold text-green-400">{selectedLevel}</span></p>
+              <h1 className="font-bold text-base md:text-xl text-blue-400 leading-none">English Beater 🥁</h1>
+              <p className="text-[10px] md:text-xs text-slate-400 mt-1">Level: <span className="font-bold text-green-400">{selectedLevel}</span></p>
             </div>
           </div>
-          <div className="flex gap-6 text-sm font-semibold">
-            <div className="flex flex-col items-center">
-              <span className="text-slate-400">Round</span>
-              <span className="text-xl">{currentRound} / 3</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="text-slate-400">Score</span>
-              <span className="text-xl text-yellow-400">{score}</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="text-slate-400">Combo</span>
-              <span className={`text-xl ${combo > 2 ? 'text-red-400 animate-pulse' : 'text-white'}`}>
-                x{combo}
-              </span>
+          <div className="flex gap-3 md:gap-6 text-xs md:text-sm font-semibold">
+            <div className="text-center"><span className="block text-slate-400 text-[10px] md:text-xs">Round</span>{currentRound}/3</div>
+            <div className="text-center"><span className="block text-slate-400 text-[10px] md:text-xs">Score</span><span className="text-yellow-400 font-bold">{score}</span></div>
+            <div className="text-center"><span className="block text-slate-400 text-[10px] md:text-xs">Combo</span>
+              <span className={combo > 2 ? "text-red-400 animate-pulse inline-block font-bold" : "text-white font-bold"}>x{combo}</span>
             </div>
           </div>
         </div>
-        {/* Progress Bar moved here */}
+        {/* Progress Bar */}
         <div className="absolute bottom-0 left-0 h-1 bg-slate-700 w-full">
           <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${(currentQuestionIndex / 10) * 100}%` }}></div>
         </div>
       </header>
 
       {/* Main Game Area */}
-      <main className="flex-1 flex flex-col items-center justify-center p-4">
-        
-        <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden">
-          <div className="p-8 flex flex-col items-center min-h-[400px]">
-            <span className="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-bold uppercase tracking-wider mb-6">
-              Question {currentQuestionIndex + 1} of 10 ({isMultiple ? 'Multiple Choice' : 'Single Choice'})
+      <main className="flex-1 flex flex-col items-center justify-start p-3 md:p-4 md:justify-center overflow-y-auto">
+        <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden mb-4">
+          <div className="p-4 md:p-8 flex flex-col items-center min-h-[350px] md:min-h-[400px]">
+            <span className="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[10px] md:text-xs font-bold uppercase mb-4 md:mb-6">
+              Question {currentQuestionIndex + 1} ({isMultiple ? 'Multiple Choice' : 'Single Choice'})
             </span>
 
-            <h2 className="text-2xl font-bold text-slate-800 mb-2 text-center">
+            <h2 className="text-lg md:text-2xl font-bold text-slate-800 mb-2 text-center">
               {currentQ.categoryContext}
             </h2>
 
             {currentQ.word && (
-              <div className="text-5xl font-black text-blue-600 my-8 text-center drop-shadow-sm">
+              <div className="text-3xl md:text-5xl font-black text-blue-600 my-6 md:my-8 text-center drop-shadow-sm">
                 {currentQ.word.word}
-                <div className="text-lg font-normal text-slate-400 mt-2">{currentQ.word.phonetic}</div>
+                <div className="text-sm md:text-lg font-normal text-slate-400 mt-2">{currentQ.word.phonetic}</div>
               </div>
             )}
 
-            <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4 mt-auto">
+            <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mt-auto">
               {currentQ.options.map((opt: Word) => {
                 const isSelected = selectedMultiple.includes(opt.id);
                 return (
@@ -204,7 +193,7 @@ export const Game: React.FC = () => {
                     key={opt.id}
                     onClick={() => isMultiple ? toggleMultiple(opt.id) : handleSingleClick(opt.id)}
                     className={`
-                      p-4 rounded-xl border-2 text-left transition-all duration-200 transform hover:-translate-y-1 hover:shadow-md
+                      p-3 md:p-4 rounded-xl border-2 text-left transition-all active:scale-95
                       ${isMultiple && isSelected 
                         ? 'border-blue-500 bg-blue-50' 
                         : 'border-slate-200 bg-white hover:border-blue-300'
@@ -212,11 +201,11 @@ export const Game: React.FC = () => {
                     `}
                   >
                     {!isMultiple ? (
-                      <span className="font-medium text-slate-700">{opt.pos} {opt.translation}</span>
+                      <span className="text-sm md:text-base font-medium text-slate-700">{opt.pos} {opt.translation}</span>
                     ) : (
                       <div className="flex flex-col">
-                        <span className="font-bold text-lg">{opt.word}</span>
-                        <span className="text-sm text-slate-500">{opt.translation}</span>
+                        <span className="font-bold text-base md:text-lg">{opt.word}</span>
+                        <span className="text-xs md:text-sm text-slate-500">{opt.translation}</span>
                       </div>
                     )}
                   </button>
@@ -227,7 +216,7 @@ export const Game: React.FC = () => {
             {isMultiple && (
               <button 
                 onClick={submitMultiple}
-                className="mt-8 px-8 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-500 w-full"
+                className="mt-6 md:mt-8 px-8 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-500 w-full active:scale-95 transition-colors"
               >
                 SUBMIT ANSWER
               </button>

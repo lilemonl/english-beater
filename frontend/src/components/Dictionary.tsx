@@ -24,30 +24,30 @@ export const Dictionary: React.FC = () => {
   const progressPercent = Math.round((learnedCount / mockWords.length) * 100);
 
   return (
-    <div className="min-h-screen bg-slate-100 p-8">
+    <div className="min-h-screen bg-slate-100 p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-3xl font-bold text-slate-800">Dictionary & Progress</h2>
-          <Button type="primary" icon={<ArrowLeftOutlined />} onClick={() => setGameState('menu')} size="large">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-800">Dictionary & Progress</h2>
+          <Button type="primary" icon={<ArrowLeftOutlined />} onClick={() => setGameState('menu')} size="large" className="w-full md:w-auto">
             Back to Menu
           </Button>
         </div>
 
         {/* Progress Section */}
         <Card className="mb-6 shadow-sm">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-bold mb-1">Learning Progress</h3>
               <p className="text-slate-500 text-sm">Words you have starred or favourited</p>
             </div>
-            <div className="w-64">
+            <div className="w-full md:w-64">
               <Progress percent={progressPercent} status="active" strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }} />
             </div>
           </div>
         </Card>
 
         {/* Filter Section */}
-        <div className="mb-6 overflow-x-auto pb-2">
+        <div className="mb-6 overflow-x-auto pb-2 scrollbar-hide">
           <Segmented 
             options={['All', 'CET-4', 'CET-6', 'IELTS', 'Starred ⭐', 'Favourited ❤️']} 
             value={filter} 

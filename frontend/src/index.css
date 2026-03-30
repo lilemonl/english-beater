@@ -15,10 +15,16 @@ body {
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
-  background: #ffffff;
-  position: static;
-  z-index: 999;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #eaedf0;
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+/* Mobile Specific Overrides for Ant Design and Global Elements */
+@media (max-width: 640px) {
+  .ant-card-body { padding: 12px !important; }
+  .text-6xl { font-size: 3.5rem !important; line-height: 1.1; }
+  .px-8 { padding-left: 1rem !important; padding-right: 1rem !important; }
 }
