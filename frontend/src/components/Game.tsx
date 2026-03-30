@@ -7,28 +7,52 @@ import { Question, Word } from '../types';
 const playDrumBeat = (volume: number, isError: boolean = false) => {
   try {
     const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-
+    
     if (isError) {
-      oscillator.type = 'sawtooth';
-      oscillator.frequency.setValueAtTime(100, audioCtx.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.3);
-      gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-      oscillator.start();
-      oscillator.stop(audioCtx.currentTime + 0.3);
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.6);
+      
+      gain.gain.setValueAtTime(volume * 0.5, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+      
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.6);
     } else {
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
-      gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-      oscillator.start();
-      oscillator.stop(audioCtx.currentTime + 0.1);
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+      // Slower decay for a more resonant, longer drum sound (0.8s)
+      osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.8);
+      
+      gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+      gain.gain.setTargetAtTime(volume * 0.5, audioCtx.currentTime + 0.1, 0.2); // Sustain the sound slightly
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+      
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.8);
+
+      const clickOsc = audioCtx.createOscillator();
+      const clickGain = audioCtx.createGain();
+      clickOsc.connect(clickGain);
+      clickGain.connect(audioCtx.destination);
+      
+      clickOsc.type = 'square';
+      clickOsc.frequency.setValueAtTime(800, audioCtx.currentTime);
+      clickGain.gain.setValueAtTime(volume * 0.2, audioCtx.currentTime);
+      clickGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+      
+      clickOsc.start();
+      clickOsc.stop(audioCtx.currentTime + 0.1);
     }
   } catch (e) {
     console.error("Audio API not supported");
@@ -36,24 +60,26 @@ const playDrumBeat = (volume: number, isError: boolean = false) => {
 };
 
 export const Game: React.FC = () => {
-  const { currentRound, currentQuestionIndex, score, combo, volume, submitAnswer } = useGameStore();
+  const { currentRound, currentQuestionIndex, score, combo, volume, selectedLevel, submitAnswer, resetGame } = useGameStore();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [selectedMultiple, setSelectedMultiple] = useState<string[]>([]);
-  const [categoryName, setCategoryName] = useState('CET-4 Core Vocabulary');
 
   // Generate mock questions on mount or round change
   useEffect(() => {
-    // In a real app, this would be an API call `GET /api/game/questions`
+    const levelWords = mockWords.filter(w => w.level === selectedLevel);
+    // Fallback to all mockWords if the specific level has too few mock words
+    const wordPool = levelWords.length >= 4 ? levelWords : mockWords;
+
     const generated: Question[] = [];
     for (let i = 0; i < 10; i++) {
       const isMultiple = i >= 8;
       
       if (!isMultiple) {
         // Single choice: pick 1 correct, 3 wrong
-        const correct = mockWords[Math.floor(Math.random() * mockWords.length)];
+        const correct = wordPool[Math.floor(Math.random() * wordPool.length)];
         const options = [correct];
-        while(options.length < 4) {
-          const wrong = mockWords[Math.floor(Math.random() * mockWords.length)];
+        while(options.length < 4 && options.length < wordPool.length) {
+          const wrong = wordPool[Math.floor(Math.random() * wordPool.length)];
           if (!options.find(o => o.id === wrong.id)) options.push(wrong);
         }
         // Shuffle
@@ -68,22 +94,22 @@ export const Game: React.FC = () => {
           categoryContext: 'Choose the correct translation'
         });
       } else {
-        // Multiple choice: find words with positive sentiment
-        const options = [...mockWords].sort(() => Math.random() - 0.5).slice(0, 4);
-        const correctIds = options.filter(o => o.sentiment === 'positive').map(o => o.id);
+        // Multiple choice: find words with positive/neutral sentiment
+        const options = [...wordPool].sort(() => Math.random() - 0.5).slice(0, 4);
+        const correctIds = options.filter(o => o.sentiment === 'positive' || o.sentiment === 'neutral').map(o => o.id);
         
         generated.push({
           id: `q-${currentRound}-${i}`,
           type: 'multiple',
           options,
           correctAnswer: correctIds,
-          categoryContext: 'Select all words with POSITIVE sentiment'
+          categoryContext: 'Select all POSITIVE/NEUTRAL words'
         });
       }
     }
     setQuestions(generated);
     setSelectedMultiple([]);
-  }, [currentRound]);
+  }, [currentRound, selectedLevel]);
 
   if (questions.length === 0) return <div className="text-center p-10">Loading...</div>;
 
@@ -116,26 +142,37 @@ export const Game: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen bg-slate-100">
       {/* Header */}
-      <header className="bg-slate-800 text-white p-4 shadow-md flex justify-between items-center sticky top-0">
-        <div>
-          <h1 className="font-bold text-xl text-blue-400">English Beater</h1>
-          <p className="text-xs text-slate-400">Current Category: {categoryName}</p>
+      <header className="bg-slate-800 text-white p-4 shadow-md relative sticky top-0">
+        <div className="flex justify-between items-center pb-1">
+          <div className="flex items-center gap-4">
+            <button onClick={() => { if(window.confirm('Are you sure you want to quit? Your current game progress will be lost.')) resetGame(); }} className="text-slate-400 hover:text-white transition-colors flex items-center justify-center bg-slate-700 p-2 rounded-lg" title="Quit Game">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            </button>
+            <div>
+              <h1 className="font-bold text-xl text-blue-400 leading-none">English Beater 🥁</h1>
+              <p className="text-xs text-slate-400 mt-1">Level: <span className="font-bold text-green-400">{selectedLevel}</span></p>
+            </div>
+          </div>
+          <div className="flex gap-6 text-sm font-semibold">
+            <div className="flex flex-col items-center">
+              <span className="text-slate-400">Round</span>
+              <span className="text-xl">{currentRound} / 3</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-slate-400">Score</span>
+              <span className="text-xl text-yellow-400">{score}</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-slate-400">Combo</span>
+              <span className={`text-xl ${combo > 2 ? 'text-red-400 animate-pulse' : 'text-white'}`}>
+                x{combo}
+              </span>
+            </div>
+          </div>
         </div>
-        <div className="flex gap-6 text-sm font-semibold">
-          <div className="flex flex-col items-center">
-            <span className="text-slate-400">Round</span>
-            <span className="text-xl">{currentRound} / 3</span>
-          </div>
-          <div className="flex flex-col items-center">
-            <span className="text-slate-400">Score</span>
-            <span className="text-xl text-yellow-400">{score}</span>
-          </div>
-          <div className="flex flex-col items-center">
-            <span className="text-slate-400">Combo</span>
-            <span className={`text-xl ${combo > 2 ? 'text-red-400 animate-pulse' : 'text-white'}`}>
-              x{combo}
-            </span>
-          </div>
+        {/* Progress Bar moved here */}
+        <div className="absolute bottom-0 left-0 h-1 bg-slate-700 w-full">
+          <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${(currentQuestionIndex / 10) * 100}%` }}></div>
         </div>
       </header>
 
@@ -143,14 +180,6 @@ export const Game: React.FC = () => {
       <main className="flex-1 flex flex-col items-center justify-center p-4">
         
         <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden">
-          {/* Progress Bar */}
-          <div className="h-2 bg-slate-200 w-full">
-            <div 
-              className="h-full bg-blue-500 transition-all duration-300" 
-              style={{ width: `${((currentQuestionIndex) / 10) * 100}%` }}
-            ></div>
-          </div>
-
           <div className="p-8 flex flex-col items-center min-h-[400px]">
             <span className="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-xs font-bold uppercase tracking-wider mb-6">
               Question {currentQuestionIndex + 1} of 10 ({isMultiple ? 'Multiple Choice' : 'Single Choice'})

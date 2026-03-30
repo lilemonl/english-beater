@@ -13,11 +13,24 @@ interface StoreState {
   maxCombo: number;
   mistakes: Word[];
   volume: number; // 0.0 to 1.0
+  selectedLevel: string;
+  
+  // User Data
+  userData: {
+    starred: string[];
+    favourites: string[];
+    notes: Record<string, string>;
+  };
 
-  startGame: () => void;
+  startGame: (level: string) => void;
   submitAnswer: (isCorrect: boolean, word?: Word) => void;
   endGame: () => void;
   resetGame: () => void;
+  
+  // User Data Actions
+  toggleStar: (wordId: string) => void;
+  toggleFavourite: (wordId: string) => void;
+  setNote: (wordId: string, note: string) => void;
 }
 
 const BASE_VOLUME = 0.4;
@@ -35,9 +48,44 @@ export const useGameStore = create<StoreState>((set) => ({
   maxCombo: 0,
   mistakes: [],
   volume: BASE_VOLUME,
+  selectedLevel: 'CET-4',
+  userData: {
+    starred: [],
+    favourites: [],
+    notes: {}
+  },
 
-  startGame: () => set({
+  toggleStar: (id) => set((state) => ({
+    userData: {
+      ...state.userData,
+      starred: state.userData.starred.includes(id) 
+        ? state.userData.starred.filter(x => x !== id)
+        : [...state.userData.starred, id]
+    }
+  })),
+
+  toggleFavourite: (id) => set((state) => ({
+    userData: {
+      ...state.userData,
+      favourites: state.userData.favourites.includes(id) 
+        ? state.userData.favourites.filter(x => x !== id)
+        : [...state.userData.favourites, id]
+    }
+  })),
+
+  setNote: (id, text) => set((state) => ({
+    userData: {
+      ...state.userData,
+      notes: {
+        ...state.userData.notes,
+        [id]: text
+      }
+    }
+  })),
+
+  startGame: (level) => set({
     gameState: 'playing',
+    selectedLevel: level,
     currentRound: 1,
     currentQuestionIndex: 0,
     score: 0,

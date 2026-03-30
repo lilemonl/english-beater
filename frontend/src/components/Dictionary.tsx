@@ -1,61 +1,135 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { Card, Tag, Button, Input, Progress, Space, Segmented, Typography, Tooltip } from 'antd';
+import { StarOutlined, StarFilled, HeartOutlined, HeartFilled, EditOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useGameStore } from '../store/gameStore';
 import { mockWords } from '../data/mockData';
 
-export const Dictionary: React.FC = () => {
-  const { setGameState } = useGameStore();
-  const [filter, setFilter] = useState('All');
+const { Text } = Typography;
+const { TextArea } = Input;
 
-  const categories = ['All', 'CET-4', 'CET-6', 'IELTS', 'Daily'];
-  
-  const filteredWords = filter === 'All' 
-    ? mockWords 
-    : mockWords.filter(w => w.level === filter);
+export const Dictionary: React.FC = () => {
+  const { setGameState, userData, toggleStar, toggleFavourite, setNote } = useGameStore();
+  const [filter, setFilter] = useState<string>('All');
+  const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
+
+  const filteredWords = useMemo(() => {
+    if (filter === 'Starred ⭐') return mockWords.filter(w => userData.starred.includes(w.id));
+    if (filter === 'Favourited ❤️') return mockWords.filter(w => userData.favourites.includes(w.id));
+    if (filter === 'All') return mockWords;
+    return mockWords.filter(w => w.level === filter);
+  }, [filter, userData]);
+
+  // Calculate unique learned words (starred or favourited)
+  const learnedCount = new Set([...userData.starred, ...userData.favourites]).size;
+  const progressPercent = Math.round((learnedCount / mockWords.length) * 100);
 
   return (
     <div className="min-h-screen bg-slate-100 p-8">
       <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-3xl font-bold text-slate-800">Dictionary</h2>
-          <button 
-            onClick={() => setGameState('menu')}
-            className="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700"
-          >
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-3xl font-bold text-slate-800">Dictionary & Progress</h2>
+          <Button type="primary" icon={<ArrowLeftOutlined />} onClick={() => setGameState('menu')} size="large">
             Back to Menu
-          </button>
+          </Button>
         </div>
 
-        <div className="flex gap-2 mb-6">
-          {categories.map(c => (
-            <button
-              key={c}
-              onClick={() => setFilter(c)}
-              className={`px-4 py-2 rounded-full font-medium ${
-                filter === c ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
-              }`}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredWords.map(w => (
-            <div key={w.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-              <div className="flex items-end gap-2 mb-2">
-                <span className="text-2xl font-bold text-slate-800">{w.word}</span>
-                <span className="text-slate-500 text-sm">{w.phonetic}</span>
-                <span className="ml-auto text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-md">
-                  {w.level}
-                </span>
-              </div>
-              <p className="font-semibold text-slate-700 mb-1">
-                <span className="text-blue-500 mr-2">{w.pos}</span>
-                {w.translation}
-              </p>
-              <p className="text-slate-500 text-sm italic">"{w.example}"</p>
+        {/* Progress Section */}
+        <Card className="mb-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold mb-1">Learning Progress</h3>
+              <p className="text-slate-500 text-sm">Words you have starred or favourited</p>
             </div>
-          ))}
+            <div className="w-64">
+              <Progress percent={progressPercent} status="active" strokeColor={{ '0%': '#108ee9', '100%': '#87d068' }} />
+            </div>
+          </div>
+        </Card>
+
+        {/* Filter Section */}
+        <div className="mb-6 overflow-x-auto pb-2">
+          <Segmented 
+            options={['All', 'CET-4', 'CET-6', 'IELTS', 'Starred ⭐', 'Favourited ❤️']} 
+            value={filter} 
+            onChange={(val) => setFilter(val as string)} 
+            size="large"
+          />
+        </div>
+
+        {/* Words Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredWords.map(w => {
+            const isStarred = userData.starred.includes(w.id);
+            const isFav = userData.favourites.includes(w.id);
+            const note = userData.notes[w.id] || '';
+            const isNoteExpanded = expandedNotes[w.id];
+
+            return (
+              <Card key={w.id} className="shadow-sm hover:shadow-md transition-shadow" bodyStyle={{ padding: '16px' }}>
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-bold text-slate-800">{w.word}</span>
+                    <span className="text-slate-500 text-sm">{w.phonetic}</span>
+                  </div>
+                  <Space>
+                    <Tooltip title="Star this word">
+                      <Button type="text" shape="circle" 
+                        icon={isStarred ? <StarFilled style={{color: '#faad14', fontSize: '18px'}}/> : <StarOutlined style={{fontSize: '18px'}}/>} 
+                        onClick={() => toggleStar(w.id)} 
+                      />
+                    </Tooltip>
+                    <Tooltip title="Favourite this word">
+                      <Button type="text" shape="circle" 
+                        icon={isFav ? <HeartFilled style={{color: '#ff4d4f', fontSize: '18px'}}/> : <HeartOutlined style={{fontSize: '18px'}}/>} 
+                        onClick={() => toggleFavourite(w.id)} 
+                      />
+                    </Tooltip>
+                  </Space>
+                </div>
+                
+                <div className="mb-3">
+                  <Tag color="blue">{w.level}</Tag>
+                  <Text type="secondary" className="mr-2">{w.pos}</Text>
+                  <Text strong>{w.translation}</Text>
+                </div>
+
+                {/* Notes Section */}
+                <div className="border-t border-slate-100 pt-3 mt-2">
+                  <Button 
+                    type="dashed" 
+                    size="small" 
+                    icon={<EditOutlined />} 
+                    onClick={() => setExpandedNotes(prev => ({...prev, [w.id]: !prev[w.id]}))}
+                  >
+                    {note ? 'Edit Note' : 'Add Note'}
+                  </Button>
+                  
+                  {(isNoteExpanded || note) && (
+                    <div className={`mt-3 transition-all ${!isNoteExpanded && note ? 'opacity-70' : ''}`}>
+                      {isNoteExpanded ? (
+                        <TextArea 
+                          rows={2} 
+                          value={note} 
+                          onChange={(e) => setNote(w.id, e.target.value)} 
+                          placeholder="Write your personal learning notes here..."
+                          className="text-sm"
+                        />
+                      ) : (
+                        <div className="bg-yellow-50 p-2 rounded text-sm text-slate-700 border border-yellow-100">
+                          {note}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </Card>
+            );
+          })}
+          {filteredWords.length === 0 && (
+            <div className="col-span-1 md:col-span-2 text-center py-12 text-slate-400">
+              No words found in this category.
+            </div>
+          )}
         </div>
       </div>
     </div>
