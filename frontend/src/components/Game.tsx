@@ -153,7 +153,7 @@ export const Game: React.FC = () => {
         <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden mb-4">
           <div className="p-4 md:p-8 flex flex-col items-center min-h-[350px] md:min-h-[400px]">
             <span className="px-3 py-1 bg-slate-100 text-slate-500 rounded-full text-[10px] md:text-xs font-bold uppercase mb-4 md:mb-6">
-              Question {currentQuestionIndex + 1} ({isMultiple ? 'Multiple Choice' : 'Single Choice'})
+              第 {currentQuestionIndex + 1} 题（{isMultiple ? '多选' : '单选'}）
             </span>
 
             <h2 className="text-lg md:text-2xl font-bold text-slate-800 mb-2 text-center">
@@ -161,9 +161,13 @@ export const Game: React.FC = () => {
             </h2>
 
             {currentQ.word && (
-              <div className="text-3xl md:text-5xl font-black text-blue-600 my-6 md:my-8 text-center drop-shadow-sm">
-                {currentQ.word.word}
-                <div className="text-sm md:text-lg font-normal text-slate-400 mt-2">{currentQ.word.phonetic}</div>
+              <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 md:p-5 my-4 md:my-6">
+                <div className="text-xs text-slate-500 mb-1">中文释义</div>
+                <div className="text-lg md:text-xl font-bold text-slate-800">{currentQ.word.translation || '-'}</div>
+                <div className="text-xs text-slate-500 mt-3 mb-1">英文释义/语境</div>
+                <div className="text-sm md:text-base text-slate-700 italic">
+                  {currentQ.word.example || `The target word is pronounced as ${currentQ.word.phonetic || 'N/A'}.`}
+                </div>
               </div>
             )}
 
@@ -183,13 +187,12 @@ export const Game: React.FC = () => {
                     `}
                   >
                     {!isMultiple ? (
-                      <span className="text-sm md:text-base font-medium text-slate-700">
-                        {opt.translation}
+                      <span className="text-base md:text-lg font-bold text-slate-700">
+                        {opt.word}
                       </span>
                     ) : (
                       <div className="flex flex-col">
                         <span className="font-bold text-base md:text-lg">{opt.word}</span>
-                        <span className="text-xs md:text-sm text-slate-500">{opt.translation}</span>
                       </div>
                     )}
                   </button>
@@ -202,7 +205,7 @@ export const Game: React.FC = () => {
                 onClick={submitMultiple}
                 className="mt-6 md:mt-8 px-8 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-500 w-full active:scale-95 transition-colors"
               >
-                SUBMIT ANSWER
+                提交答案
               </button>
             )}
           </div>

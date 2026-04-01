@@ -118,6 +118,27 @@ interface QueryOptions {
   pageSize?: number;
 }
 
+const normalize = (text: string) => text.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
+
+const isSubsequence = (needle: string, haystack: string) => {
+  let i = 0;
+  let j = 0;
+  while (i < needle.length && j < haystack.length) {
+    if (needle[i] === haystack[j]) i += 1;
+    j += 1;
+  }
+  return i === needle.length;
+};
+
+const fuzzyMatch = (query: string, target: string) => {
+  const q = normalize(query);
+  const t = normalize(target);
+  if (!q) return true;
+  if (!t) return false;
+  if (t.includes(q)) return true;
+  return q.length >= 2 && isSubsequence(q, t);
+};
+
 export const queryWords = (options: QueryOptions) => {
   const words = loadWords();
   const {
@@ -135,7 +156,7 @@ export const queryWords = (options: QueryOptions) => {
     if (pos && !w.pos.includes(pos)) return false;
     if (sentiment && w.sentiment !== sentiment) return false;
     if (theme && w.theme !== theme) return false;
-    if (q && !(`${w.word} ${w.translation}`.toLowerCase().includes(q.toLowerCase()))) return false;
+    if (q && !fuzzyMatch(q, `${w.word} ${w.translation} ${w.example || ''}`)) return false;
     return true;
   });
 

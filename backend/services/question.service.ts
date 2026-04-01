@@ -16,6 +16,9 @@ export interface Question {
     id: string;
     word: string;
     phonetic: string;
+    translation?: string;
+    pos?: string;
+    example?: string;
   };
   options: QuestionOption[];
   correctAnswerIds: string[];
@@ -51,13 +54,14 @@ const buildSingleQuestion = (pool: Word[], index: number): Question => {
   return {
     id: `single-${index}-${Date.now()}`,
     type: 'single',
-    prompt: 'Choose the correct translation',
+    prompt: '请选择符合释义的英文单词',
     word: {
       id: correct.id,
       word: correct.word,
       phonetic: correct.phonetic,
       translation: correct.translation,
-      pos: correct.pos
+      pos: correct.pos,
+      example: correct.example
     },
     options: allOptions,
     correctAnswerIds: [correct.id]
@@ -75,7 +79,7 @@ const buildMultipleQuestion = (pool: Word[], index: number): Question => {
   return {
     id: `multiple-${index}-${Date.now()}`,
     type: 'multiple',
-    prompt: 'Select all positive/neutral words',
+    prompt: '请选择语义偏积极或中性的英文单词',
     options: options.map((w) => ({
       id: w.id,
       word: w.word,

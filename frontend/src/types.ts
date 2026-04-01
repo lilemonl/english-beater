@@ -29,6 +29,7 @@ export interface Question {
     phonetic: string;
     translation?: string;
     pos?: string;
+    example?: string;
   };
   options: QuestionOption[];
   correctAnswerIds: string[];
